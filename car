@@ -1,0 +1,122 @@
+#include <iostream>
+#include <string>
+#include <iomanip>
+#include <format> 
+
+enum class OrderStatus {
+    Pending,
+    Confirmed,
+    Rejected,
+    Completed
+};
+
+class CarRentalOrder {
+private:
+    
+    std::string clientPassport;
+    std::string carModel;
+    int rentalDays{ 0 };
+    double dailyRate{ 0.0 };
+    double totalCost{ 0.0 };
+    OrderStatus status{ OrderStatus::Pending };
+    std::string rejectionReason{ "None" };
+    bool isDamaged{ false };
+
+    [[nodiscard]] std::string getStatusAsString() const {
+        switch (status) {
+        case OrderStatus::Pending:   return "Pending Approval";
+        case OrderStatus::Confirmed: return "Confirmed & Paid";
+        case OrderStatus::Rejected:  return "Rejected";
+        case OrderStatus::Completed: return "Completed";
+        default:                     return "Unknown";
+        }
+    }
+
+public:
+    
+    CarRentalOrder() = default;
+
+    CarRentalOrder(std::string passport, std::string car, int days, double pricePerDay)
+        : clientPassport(std::move(passport)),
+        carModel(std::move(car)),
+        rentalDays(days),
+        dailyRate(pricePerDay) {
+        calculateTotalCost();
+    }
+
+    void calculateTotalCost() {
+        totalCost = rentalDays * dailyRate;
+    }
+
+    void updateOrderDetails(const std::string& passport, const std::string& car, int days, double rate) {
+        clientPassport = passport;
+        carModel = car;
+        rentalDays = days;
+        dailyRate = rate;
+        calculateTotalCost();
+        status = OrderStatus::Pending; 
+    }
+
+    void confirmAndPay() {
+        if (status == OrderStatus::Rejected) {
+            std::cout << "[ERROR] Cannot confirm a rejected order.\n";
+            return;
+        }
+        status = OrderStatus::Confirmed;
+        std::cout << "[SUCCESS] Order confirmed! Total paid: $" << std::fixed << std::setprecision(2) << totalCost << "\n";
+    }
+
+    void rejectOrder(const std::string& reason) {
+        status = OrderStatus::Rejected;
+        rejectionReason = reason;
+        std::cout << "[ADMIN] Order rejected. Reason: " << rejectionReason << "\n";
+    }
+
+    void reportDamage(bool damaged) {
+        isDamaged = damaged;
+        if (damaged) {
+            std::cout << "[ADMIN WARNING] Damage reported for vehicle: " << carModel << "\n";
+        }
+    }
+
+    [[nodiscard]] std::string getClientPassport() const { return clientPassport; }
+    [[nodiscard]] std::string getCarModel() const { return carModel; }
+    [[nodiscard]] int getRentalDays() const { return rentalDays; }
+    [[nodiscard]] double getTotalCost() const { return totalCost; }
+    [[nodiscard]] bool getIsDamaged() const { return isDamaged; }
+
+    void displaySummary() const {
+        std::cout << "\n=========================================\n";
+        std::cout << "        CAR RENTAL ORDER SUMMARY         \n";
+        std::cout << "=========================================\n";
+        std::cout << " Client Passport : " << clientPassport << "\n";
+        std::cout << " Vehicle Model   : " << carModel << "\n";
+        std::cout << " Rental Duration : " << rentalDays << " days\n";
+        std::cout << " Daily Rate      : $" << std::fixed << std::setprecision(2) << dailyRate << "\n";
+        std::cout << " Total Amount    : $" << totalCost << "\n";
+        std::cout << " Order Status    : " << getStatusAsString() << "\n";
+
+        if (status == OrderStatus::Rejected) {
+            std::cout << " Rejection Reason: " << rejectionReason << "\n";
+        }
+
+        std::cout << " Vehicle Damage  : " << (isDamaged ? "YES (Inspection Required)" : "NO") << "\n";
+        std::cout << "=========================================\n\n";
+    }
+};
+int main() {
+    std::cout << ">>> Client creates a order...\n";
+    CarRentalOrder order("US987654321", "Ford Mustang GT", 3, 150.0);
+    order.displaySummary();
+    std::cout << ">>> Administrator confirms order...\n";
+    order.confirmAndPay();
+    std::cout << ">>> Vehicle inspection after rental...\n";
+    order.reportDamage(true);
+    order.displaySummary();
+    std::cout << ">>> Creating a second order that gets rejected...\n";
+    CarRentalOrder invalidOrder("UK112233445", "BMW M5", 10, 250.0);
+    invalidOrder.rejectOrder("Insufficient driving history.");
+    invalidOrder.displaySummary();
+
+    return 0;
+}
